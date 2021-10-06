@@ -1,7 +1,15 @@
 import pandas as pd
+from datetime import datetime
 import matplotlib.pyplot as plt
 ##note to self: need to apt-get install python-tk for matplotlib
 
+# datetime object containing current date and time
+now = datetime.now()
+
+print("now =", now)
+
+# dd/mm/YY H:M:S
+dt_string = now.strftime("%d-%m-%Y-%H%M%S")
 ###############################################
 ## helper functions for manipulating the rows
 
@@ -111,41 +119,56 @@ syn_robust = syn_cleaned[syn_cleaned.sections > 2]
 syn_robust_grouped = syn_robust.groupby(["pre","post"]).sum().reset_index()
 #syn_robust = syn_grouped[syn_grouped.sections > 2]
 
+
+######################################################################
+##graphing time
+
 ##count number of post-synaptic types for each neuron
-syn_count = syn_grouped.groupby(["pre"]).size().reset_index(name="count")
+syn_count = syn_grouped.groupby(["pre"]).size().reset_index(name="num_post_types")
 ##graph it
-count_types = syn_count["count"]
+count_types = syn_count["num_post_types"]
 numbins = count_types.max() - count_types.min() + 1
 fig, ax = plt.subplots(1,1)
 ax.hist(count_types,bins=numbins)
 ax.set_title("Distribution of synapse outdegrees (N2Y)")
-ax.set_xlabel("outdegree")
+ax.set_xlabel("outdegree (number of post-synaptic types)")
 ax.set_ylabel("frequency")
-plt.show()
+#plt.show()
+#save the plot
+plt.savefig("histogram-outdegree-N2Y-"+dt_string+".png")
 
 ##count number of post-synaptic types for each neuron
 ##but for robust
-syn_count_robust = syn_robust_grouped.groupby(["pre"]).size().reset_index(name="count")
+syn_count_robust = syn_robust_grouped.groupby(["pre"]).size().reset_index(name="num_post_types")
 ##graph it
-count_types_robust = syn_count_robust["count"]
+count_types_robust = syn_count_robust["num_post_types"]
 numbins = count_types_robust.max() - count_types_robust.min() + 1
 fig, ax = plt.subplots(1,1)
 ax.hist(count_types_robust,bins=numbins)
 ax.set_title("Distribution of synapse outdegrees (N2Y) (robust)")
-ax.set_xlabel("outdegree")
+ax.set_xlabel("outdegree (number of post-synaptic types)")
 ax.set_ylabel("frequency")
-plt.show()
+#plt.show()
+#save the plot
+plt.savefig("histogram-outdegree-N2Y-robust-"+dt_string+".png")
 
 ##turn "edge list" into adjacency table before saving
 #(see https://medium.com/@yangdustin5/quick-guide-to-pandas-pivot-table-crosstab-40798b33e367)
 def save_df(df,filename):
     adj_table = pd.crosstab(index=df["pre"],columns=df["post"],values=df["sections"],aggfunc="sum")
     #adj_table.to_csv('adj_table_03.csv')
-    adj_table.to_csv(filename+'.csv')
+    adj_table.to_csv(filename+'.csv',encoding='utf-8-sig')
     adj_table_transpose = adj_table.transpose()
-    adj_table_transpose.to_csv(filename+'_transpose.csv')
+    adj_table_transpose.to_csv(filename+'-transpose.csv',encoding='utf-8-sig')
 
+######################################################################
+##save the tables
 
+save_df(syn_grouped,"adj-table-"+dt_string)
+save_df(syn_grouped,"adj-table-robust-"+dt_string)
+#also save the outdegrees (number of types)
+syn_count.to_csv("outdegrees-"+dt_string+".csv",encoding='utf-8-sig')
+syn_count_robust.to_csv("outdegrees-robust-"+dt_string+".csv",encoding='utf-8-sig')
 
 ################################################################
 ## experimental

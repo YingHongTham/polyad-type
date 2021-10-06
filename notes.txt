@@ -1,0 +1,10 @@
+get-polyad-types.py produces:
+-4 tables:
+	adj-table-(robust)-<date>-(transpose).csv
+	-adj-table has row=pre, col=post types
+	-transpose because LibreOffice is having trouble with too many columns
+	-robust means we get rid of all synapses of size <= 2
+-2 more tables:
+	outdegrees-(robust).csv
+	-counts number of types of post-synaptic types for each pre
+-2 plots of the outdegrees tables
