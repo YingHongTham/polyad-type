@@ -69,11 +69,11 @@ def convert_name(name):
 weird_names = []
 def good_cellname(name):
     global weird_names
-    global neurons
-    if good_cellname_old(name) != (name in neurons):
-        print(name + "; in SI4? : " + str(name in neurons))
+    global celllist
+    if good_cellname_old(name) != (name in celllist):
+        print(name + "; in SI4? : " + str(name in celllist))
         weird_names.append(name)
-    return name in neurons
+    return name in celllist
 
 ##detecting bad names by manually eliminating
 ##only for diagnosing problem
@@ -84,10 +84,10 @@ def good_cellname_old(name):
 ######################################################################
 
 #get list of neurons (help with pruning bad data)
-neurons = pd.read_csv("male_neurons.csv", header=None, comment='#')
+celllist = pd.read_csv("male_celllist.csv", header=None, comment='#')
 #remove unexpected spaces...
-neurons = neurons[0].apply(lambda x : x.replace(" ",""))
-neurons = neurons.tolist()
+celllist = celllist[0].apply(lambda x : x.replace(" ",""))
+celllist = celllist.tolist()
 ##note to self: DataFrame object doesn't have tolist(),
 ##but a column object does..
 
