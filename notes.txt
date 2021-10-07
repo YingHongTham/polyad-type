@@ -45,3 +45,29 @@ On the cleaning procedure:
 		"xxx,HOA,yyy" -> "HOA"
 		"xxx,yyy" -> ""
 -discard rows with an "" entry
+
+
+######################################################################
+pip install stuff:
+mysql-connector-python-rf
+mysql-connector-python #this one doesn't seem to work/be enough
+matplotlib
+pandas
+
+for the .sql files, it stores information by issueing the commands
+that create the database (CREATE DATABASE ...), table (CREATE TABLE ...), data (INSERT ...)
+usually load to our sql server by
+$ mysql -u yinghong -p < adult_databases.sql
+but it seems the sql files are lacking the CREATE DATABASE commands...
+manually added them myself:
+
+
+in adult_databases.sql:
+
+CREATE DATABASE adult_db;
+USE adult_db;
+
+in l4_databases.sql:
+
+CREATE DATABASE l4_db;
+USE l4_db;

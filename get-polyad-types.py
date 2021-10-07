@@ -83,7 +83,9 @@ def good_cellname_old(name):
 
 ######################################################################
 
-#get list of neurons (help with pruning bad data)
+#get list of cells (help with pruning bad data)
+#(but also compare https://www.wormatlas.org/celllistsulston.htm
+#seems some cells like HSNL/R, VC01(VC1) are there, but not in celllist
 celllist = pd.read_csv("male_celllist.csv", header=None, comment='#')
 #remove unexpected spaces...
 celllist = celllist[0].apply(lambda x : x.replace(" ",""))
