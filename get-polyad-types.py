@@ -121,6 +121,21 @@ syn_robust = syn_cleaned[syn_cleaned.sections > 2]
 syn_robust_grouped = syn_robust.groupby(["pre","post"]).sum().reset_index()
 #syn_robust = syn_grouped[syn_grouped.sections > 2]
 
+######################################################################
+## compare the amount of robust sections to all sections
+syn_compare = syn_cleaned.copy()
+syn_compare['robust_sections'] = syn_cleaned['sections'].apply(lambda x : x * (x > 2))
+syn_compare_grouped = syn_compare.groupby(["pre","post"]).sum().reset_index()
+syn_compare_grouped['robust_ratio'] = syn_compare_grouped.robust_sections / syn_compare_grouped.sections
+
+##plot; most are 0, but a sizeable 1, and then the rest are sprinkled
+##in the middle
+ratios = syn_compare_grouped['robust_ratio']
+numbins = 100
+fig, ax = plt.subplots(1,1)
+ax.hist(ratios,bins=numbins)
+#plt.show()
+
 
 ######################################################################
 ##save the tables
