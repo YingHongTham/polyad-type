@@ -7,10 +7,14 @@ import pandas as pd
 ## sudo systemctl start mysql
 ## see notes.txt on how to load databases from Brittin into server
 
+##TODO get a robust version? probably can use imgNum as proxy for z-value
+
 pw = getpass.getpass(prompt='Password: ', stream=None)
 cnx = sql.connect(host='localhost', user='yinghong', password=pw, database='adult_db')
 pw = 0
 
+## adjacency2 column names:
+## pre, post, preidx, postidx, imgNum, weight, preObj, postObj
 query = 'SELECT pre, post, imgNum, weight FROM adjacency2;' ##add LIMIT 10 for test
 cursor = cnx.cursor() #some iterator
 cursor.execute(query)

@@ -1,4 +1,7 @@
 get-polyad-types.py produces:
+-2 lists:
+	-synapse-sections-<date>.csv, synapse-sections-robust-<date>.csv
+	-list of synapse types with number of sections
 -4 tables:
 	adj-table-(robust)-<date>-(transpose).csv
 	-adj-table has row=pre, col=post types

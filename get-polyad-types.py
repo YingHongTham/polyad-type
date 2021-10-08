@@ -108,7 +108,7 @@ syn["pre"] = syn["pre"].apply(clean_neuron_name)
 #clean the post neurons
 syn["post"] = syn["post"].apply(clean_post)
 
-#after cleaning, empty string means unknown
+#after cleaning, empty string means unknown, filter them out
 syn_cleaned = syn[(syn.pre != "") & (syn.post != "")]
 
 #sum total number of sections by pre,post
@@ -121,6 +121,28 @@ syn_robust = syn_cleaned[syn_cleaned.sections > 2]
 syn_robust_grouped = syn_robust.groupby(["pre","post"]).sum().reset_index()
 #syn_robust = syn_grouped[syn_grouped.sections > 2]
 
+
+######################################################################
+##save the tables
+
+syn_grouped.to_csv('synapse-sections-'+dt_string+'.csv',encoding='utf-8-sig')
+syn_robust_grouped.to_csv('synapse-sections-robust-'+dt_string+'.csv',encoding='utf-8-sig')
+
+##save as adjacency table
+#(see https://medium.com/@yangdustin5/quick-guide-to-pandas-pivot-table-crosstab-40798b33e367)
+def save_df_as_adj(df,filename):
+    adj_table = pd.crosstab(index=df["pre"],columns=df["post"],values=df["sections"],aggfunc="sum")
+    #adj_table.to_csv('adj_table_03.csv')
+    adj_table.to_csv(filename+'.csv',encoding='utf-8-sig')
+    adj_table_transpose = adj_table.transpose()
+    adj_table_transpose.to_csv(filename+'-transpose.csv',encoding='utf-8-sig')
+
+
+save_df_as_adj(syn_grouped,"adj-table-"+dt_string)
+save_df_as_adj(syn_grouped,"adj-table-robust-"+dt_string)
+#also save the outdegrees (number of types)
+syn_count.to_csv("outdegrees-"+dt_string+".csv",encoding='utf-8-sig')
+syn_count_robust.to_csv("outdegrees-robust-"+dt_string+".csv",encoding='utf-8-sig')
 
 ######################################################################
 ##graphing time
@@ -153,25 +175,6 @@ ax.set_ylabel("frequency")
 #plt.show()
 #save the plot
 plt.savefig("histogram-outdegree-N2Y-robust-"+dt_string+".png")
-
-##turn "edge list" into adjacency table before saving
-#(see https://medium.com/@yangdustin5/quick-guide-to-pandas-pivot-table-crosstab-40798b33e367)
-def save_df(df,filename):
-    adj_table = pd.crosstab(index=df["pre"],columns=df["post"],values=df["sections"],aggfunc="sum")
-    #adj_table.to_csv('adj_table_03.csv')
-    adj_table.to_csv(filename+'.csv',encoding='utf-8-sig')
-    adj_table_transpose = adj_table.transpose()
-    adj_table_transpose.to_csv(filename+'-transpose.csv',encoding='utf-8-sig')
-
-######################################################################
-##save the tables
-
-save_df(syn_grouped,"adj-table-"+dt_string)
-save_df(syn_grouped,"adj-table-robust-"+dt_string)
-#also save the outdegrees (number of types)
-syn_count.to_csv("outdegrees-"+dt_string+".csv",encoding='utf-8-sig')
-syn_count_robust.to_csv("outdegrees-robust-"+dt_string+".csv",encoding='utf-8-sig')
-
 ################################################################
 ## experimental
 ################################################################
