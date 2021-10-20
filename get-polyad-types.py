@@ -1,4 +1,6 @@
 import pandas as pd
+import numpy as np
+import os
 from datetime import datetime
 import matplotlib.pyplot as plt
 ##note to self: need to apt-get install python-tk for matplotlib
@@ -136,9 +138,52 @@ fig, ax = plt.subplots(1,1)
 ax.hist(ratios,bins=numbins)
 #plt.show()
 
+######################################################################
+##get distribution of synapse sizes (#sections) by (pre) neuron
+##see if there are synapse types
+synapse_sections_dist = syn_cleaned.groupby('pre')['sections'].apply(list).reset_index(name='section_dist')
+synapse_sections_dist['pvariance'] = synapse_sections_dist.section_dist.apply(statistics.pvariance)
+
+##get cell with largest variation (it's PHAR)
+max_var_ind = np.argmax(synapse_sections_dist['pvariance'])
+
+##PHAR has largest variance
+PHAR_dist = synapse_sections_dist.iloc[max_var_ind].section_dist
+##equivalently: synapse_sections_dist[synapse_sections_dist.pre == 'PHAR'].section_dist.values[0]
+
+
+dir_histograms = 'synapse-size-histograms-'+dt_string
+#os.mkdir(dir_histograms)
+
+def save_graph_by_row(row):
+	mylist = row['section_dist']
+	if len(mylist) < 60:
+		return
+	cellname = row['pre']
+	numbins = max(mylist) - min(mylist) + 1
+	fig, ax = plt.subplots(1,1)
+	ax.hist(mylist,bins=numbins)
+	ax.set_title('Distribution of synapse sizes of '+cellname+' (as pre)')
+	ax.set_xlabel('Synapse size (=number of sections)')
+	ax.set_ylabel('frequency')
+	plt.savefig(dir_histograms+'/'+cellname+'.png')
+
+synapse_sections_dist.apply(save_graph_by_row, axis=1)
+
+##HOA has (by far) the biggest synapse
+##>>> syn_cleaned[(syn_cleaned.pre == 'HOA') & (syn_cleaned.sections > 10)]
+##      pre            post  sections
+##927   HOA       PHCR,R8AR        15
+##1021  HOA  CP02,PHCL,R8AL        14
+##2548  HOA  CP02,PHCL,R8AL        17
+##2562  HOA            PHCL        41
+
 
 ######################################################################
+######################################################################
 ##save the tables
+######################################################################
+######################################################################
 
 syn_grouped.to_csv('synapse-sections-'+dt_string+'.csv',encoding='utf-8-sig')
 syn_robust_grouped.to_csv('synapse-sections-robust-'+dt_string+'.csv',encoding='utf-8-sig')

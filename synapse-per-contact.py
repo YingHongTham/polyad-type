@@ -27,8 +27,7 @@ contact_pixels_adj = pd.read_csv('N2Y-PAG-contact-matrix.csv',index_col=0)
 #this is from get-contact-matrix-Brittin-N2U.py
 #contact_sections = pd.read_csv('contact-sections-07-10-2021-175538.csv', index_col=0)
 synapse_sections = pd.read_csv('synapse-types-06-10-2021-173407/synapse-sections-06-10-2021-173407.csv', index_col=0)
-synapse_sections_robust =
-pd.read_csv('synapse-types-06-10-2021-173407/synapse-sections-robust-06-10-2021-173407.csv', index_col=0)
+synapse_sections_robust = pd.read_csv('synapse-types-06-10-2021-173407/synapse-sections-robust-06-10-2021-173407.csv', index_col=0)
 
 ##use non-robust for now; unclear how to get robust version of contact
 
@@ -82,3 +81,21 @@ synapse_keys = set(synapse_dict.keys())
 contact_keys.intersection(synapse_keys)
 ##lots of cells are not in contact;
 ##need to weed out muscle cells
+
+######################################################################
+##analyze self-contact / autapse
+synapse_self = synapse_regrouped[synapse_regrouped.pre == synapse_regrouped.post]
+contact_self = contact_pixels[contact_pixels.pre == contact_pixels.post]
+
+synapse_self_cells = set(synapse_self['pre'])
+contact_self_cells = set(contact_self['pre'])
+
+##TODO very strange! some cells synapse but contact is not recorded!
+## synapse_self_cells.difference(contact_self_cells)
+##set(['SDQL', 'PVM', 'PDER', 'R7AL'])
+contact_no_synapse_cells = contact_self_cells.difference(synapse_self_cells)
+contact_no_synapse = contact_self[contact_self.pre.isin(contact_no_synapse_cells)]
+
+common_cells = synapse_self_cells.intersection(contact_self_cells)
+synapse_common = synapse_self[synapse_self.pre.isin(common_cells)]
+contact_common = contact_self[contact_self.pre.isin(common_cells)]
