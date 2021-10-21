@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+from helpers import *
 
 ######################################################################
 ##TODO refactor this, copied from get-polyad-types.py
@@ -35,10 +36,12 @@ syn_grouped_flippedLR = syn_grouped.copy()
 syn_grouped_flippedLR['pre'] = syn_grouped_flippedLR['pre'].apply(flipLR)
 syn_grouped_flippedLR['post'] = syn_grouped_flippedLR['post'].apply(lambda x : apply_fn_post(flipLR, x))
 
-
+##to adj matrix
 adj_orig = pd.crosstab(index=syn_grouped['pre'],columns=syn_grouped['post'],values=syn_grouped['sections'],aggfunc='sum').fillna(0)
 adj_flip = pd.crosstab(index=syn_grouped_flippedLR['pre'],columns=syn_grouped_flippedLR['post'],values=syn_grouped_flippedLR['sections'],aggfunc='sum').fillna(0)
 
+
+##ensure they have the same set of columns
 columns_orig = set(adj_orig.columns)
 columns_flip = set(adj_flip.columns)
 
@@ -48,8 +51,25 @@ for col in columns_flip.difference(columns_orig):
 for col in columns_orig.difference(columns_flip):
 	adj_flip[col] = 0
 
+##ensure column names are in the same order
 adj_orig = adj_orig[sorted(adj_orig.columns)]
 adj_flip = adj_flip[sorted(adj_flip.columns)]
 
+adj_orig_pre = set(adj_orig.index)
+adj_flip_pre = set(adj_flip.index)
+common_pre = adj_orig_pre.intersection(adj_flip_pre)
+
+L1_dist = pd.DataFrame((x, sum(abs(adj_orig.loc[x] - adj_flip.loc[x]))) for x in common_pre)
+Adam_dist = pd.DataFrame((x, similarity_score(adj_orig.loc[x], adj_flip.loc[x])) for x in common_pre)
+L1_dist.columns = ['pre','L1_dist']
+Adam_dist.columns = ['pre','similarity']
+
+x = 'AVDL'
+similarity_score(adj_orig.loc[x], adj_flip.loc[x])
+
+#adj_orig = adj_orig.sort_index()
+#adj_flip = adj_flip.sort_index()
+
+
 ##TODO next: compare rows of adj_orig, adj_flip
-sum(abs(adj_orig.iloc[0] - adj_flip.iloc[0]))
+#sum(abs(adj_orig.iloc[0] - adj_flip.iloc[0]))

@@ -18,6 +18,7 @@ def clean_post(post):
 
 ##apply function fn : str -> str to each entry of comma-separated list post
 ##removes entries that return empty string under fn
+##sorts also
 def apply_fn_post(fn, post):
 	post = post.replace(" ","")
 	post_list = post.split(",")
@@ -132,6 +133,14 @@ C_1 = 0.5
 C_2 = 1
 def similarity_score_single(x, y):
 	return min(x,y) - C_1 * max(x,y) * (math.e ** ( - C_2 * min(x,y) ))
+
+##takes in two pandas.Series (with same column names)
+def similarity_score(x, y):
+	df = pd.DataFrame()
+	df = df.append(x)
+	df = df.append(y)
+	df.index = [0,1]
+	return sum(df.apply(lambda c : similarity_score_single(c[0],c[1]),axis=0))
 
 
 ######################################################################

@@ -152,26 +152,4 @@ ax.set_ylabel('frequency')
 #plt.show()
 #save the plot
 plt.savefig('histogram-outdegree-N2Y-robust-'+dt_string+'.png')
-################################################################
-## experimental
-################################################################
-
-##get all the post synaptic stuff
-##trying to sort out which values to keep/discard..
-##there are the entries like [CP01],
-##   which are unsure connections so we discard
-## but there's also stuff like unk5590...
-## even unk4733[hyp], contin5934[AVF][AVH][AVJ][PVN]...
-#all_post = df['post'].tolist()
-#all_post = [x.split(',') for x in all_post]
-#all_post = sum(all_post,[])
-#all_post = sorted(list(set(all_post)))
-#all_pre = sorted(list(set(df['pre'].tolist())))
-
-
-## way to get new dataframe;
-## axis=1 means apply to rows
-## 'expand' makes it 3 columns instead of 1
-#df.apply(lambda row : [row.pre, sort_post(row.post), row.sections], axis=1, result_type='expand').head()
-
 
