@@ -59,13 +59,38 @@ adj_orig_pre = set(adj_orig.index)
 adj_flip_pre = set(adj_flip.index)
 common_pre = adj_orig_pre.intersection(adj_flip_pre)
 
-L1_dist = pd.DataFrame((x, sum(abs(adj_orig.loc[x] - adj_flip.loc[x]))) for x in common_pre)
-Adam_dist = pd.DataFrame((x, similarity_score(adj_orig.loc[x], adj_flip.loc[x])) for x in common_pre)
+
+def L1_diff_single(a,b) : return abs(a - b)
+
+L1_dist = pd.DataFrame((x, total_similarity_score(L1_diff_single, adj_orig.loc[x],adj_flip.loc[x])) for x in common_pre)
+Adam_dist = pd.DataFrame((x, total_similarity_score(similarity_score_single, adj_orig.loc[x],adj_flip.loc[x])) for x in common_pre)
+
 L1_dist.columns = ['pre','L1_dist']
 Adam_dist.columns = ['pre','similarity']
 
-x = 'AVDL'
-similarity_score(adj_orig.loc[x], adj_flip.loc[x])
+
+
+##also do contact matrix
+
+##same as contact_pixels_adj from synapse-per-contact
+contact_adj = pd.read_csv('N2Y-PAG-contact-matrix.csv',index_col=0)
+contact_adj = contact_adj.fillna(0)
+cols = contact_adj.columns
+rows = contact_adj.index
+
+newcols = map(flipLR, list(cols))
+newrows = map(flipLR, list(rows))
+
+
+##rename with L/R flipped
+contact_flipped = contact_adj.copy()
+contact_flipped.columns = newcols
+contact_flipped.index = newrows
+##then reorder
+contact_flipped = contact_flipped[cols]
+contact_flipped = contact_flipped.reindex(rows)
+
+
 
 #adj_orig = adj_orig.sort_index()
 #adj_flip = adj_flip.sort_index()

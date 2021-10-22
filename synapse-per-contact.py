@@ -4,24 +4,6 @@ import matplotlib.pyplot as plt
 
 
 ######################################################################
-##some helpers
-##gets the n-th cell in post
-##returns empty string if n is out of bounds
-def extract_post(n, post):
-    arr = post.split(',')
-    if len(arr) < n + 1:
-        return ''
-    else:
-        return arr[n]
-
-##returns True if cell is in post (as a comma-sep string)
-##when used in df.apply, it's passed as a Series?
-##need to convert to string..
-def in_post(cell, post):
-    post = str(post)
-    return cell in post.split(',')
-
-######################################################################
 ##load data
 contact_pixels_adj = pd.read_csv('N2Y-PAG-contact-matrix.csv',index_col=0)
 #this is from get-contact-matrix-Brittin-N2U.py
@@ -50,31 +32,22 @@ contact_pixels.columns = ['pre','post','pixels']
 
 
 ######################################################################
-##get polyads as multiple synapses (as in old adjacency matrix)
-##unclear how to compare otherwise
-#get max num post synaptic cells
-max_post = max(synapse_sections.apply(lambda row : len(row.post.split(',')),axis = 1))
-synapse_separate = pd.DataFrame(columns=['pre','post','sections'])
-for n in range(max_post):
-    df = synapse_sections.copy()
-    df.post = df.post.apply(lambda post : extract_post(n,post))
-    df = df[df.post != '']
-    synapse_separate = synapse_separate.append(df)
-
-synapse_regrouped = synapse_separate.groupby(["pre","post"]).sum().reset_index()
+##treat polyads as multiple monads (as in old adjacency matrix)
+##(unclear how to compare with contact matrix otherwise)
+synapse_monad = polyad_to_monad(synapse_sections)
 
 
 ######################################################################
 ##combine the pre and post columns to make unique keys
 ##then turn them into dictionaries
 ##easier for comparison
-synapse_dict = dict(zip(map(';'.join, zip(synapse_regrouped.pre, synapse_regrouped.post)), synapse_regrouped.sections))
+synapse_dict = dict(zip(map(';'.join, zip(synapse_monad.pre, synapse_monad.post)), synapse_monad.sections))
 contact_dict = dict(zip(map(';'.join, zip(contact_pixels.pre, contact_pixels.post)), contact_pixels.pixels))
 ##contact_dict = dict(zip(map(';'.join, zip(contact_sections_bi.pre, contact_sections_bi.post)), contact_sections_bi.sections))
 #that's a mouthful; step by step:
-#   prepost = zip(synapse_regrouped.pre, synapse_regrouped.post)
+#   prepost = zip(synapse_monad.pre, synapse_monad.post)
 #   prepost = map(';'.join, prepost)  ##combines (pre,post) into pre;post
-#   synapse_dict = dict(zip(prepost,synapse_regrouped.sections))
+#   synapse_dict = dict(zip(prepost,synapse_monad.sections))
 
 contact_keys = set(contact_dict.keys())
 synapse_keys = set(synapse_dict.keys())
@@ -84,7 +57,7 @@ contact_keys.intersection(synapse_keys)
 
 ######################################################################
 ##analyze self-contact / autapse
-synapse_self = synapse_regrouped[synapse_regrouped.pre == synapse_regrouped.post]
+synapse_self = synapse_monad[synapse_monad.pre == synapse_monad.post]
 contact_self = contact_pixels[contact_pixels.pre == contact_pixels.post]
 
 synapse_self_cells = set(synapse_self['pre'])
