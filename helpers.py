@@ -139,7 +139,7 @@ def ridLR(name):
 	if len(ind) > 0:
 		if len(ind) > 1:
 			print('cell name appears twice in cellLR!')
-		return cellLR.iloc[ind[0]].name
+		return cellLR.iloc[ind[0]]['name']
 	return name
 
 ##if name comes from L/R pair, get it as a list
@@ -154,6 +154,14 @@ def uncombineLR(name):
 			print('cell name appears twice in cellLR!')
 		return [cellLR.iloc[ind[0]].L, cellLR.iloc[ind[0]].R]
 	return [name]
+
+
+def isLR(name):
+	global cellLR
+	return (name in list(cellLR.L)) or (name in list(cellLR.R))
+
+def drop_noLR(df_edgelist):
+	return df_edgelist.loc[(df_edgelist['pre'].apply(isLR)) | (df_edgelist['post'].apply(isLR))]
 
 
 ######################################################################
@@ -176,31 +184,108 @@ def total_similarity_score(fn, x, y):
 	df.index = [0,1]
 	return sum(df.apply(lambda c : fn(c[0],c[1]),axis=0))
 
+##convert fn_single into a function on two Series x,y
+##optional new function name
+def total_fn(fn_single, newfnname=''):
+	def totaling_fn(x, y):
+		return total_similarity_score(fn_single,x,y)
+
+	if len(newfnname) > 0:
+		totaling_fn.__name__ = newfnname
+	else:
+		totaling_fn.__name__ = 'total_' + fn_single.__name__
+	return totaling_fn
+
 
 ##L/R symmetry compute
-##expect DataFrame adjacency matrix (pre against post)
-##polyad? True if post is given as polyad
-##returns
-def LR_symmetry(adj, polyad=False):
-	rows = list(adj.index())
+##expects:
+##adj : DataFrame adjacency matrix (pre against post)
+##fn : the similarity function to use to compare two rows (Series)
+##polyad : True if post is given as polyad (default = True)
+##combineLR : True if combine the L/R versions of post
+##returns the similarity score for each neuron (LR merged)
+
+def LR_symmetry(adj, fn, polyad=False, combineLR=False):
+	#get the pre,post names
+	rows = list(adj.index)
 	cols = list(adj.columns)
 
+	#apply the flipping to names
 	adj_flipped = adj.copy()
 	newrows = map(flipLR,rows)
 	newcols = map(flipLR,cols)
 	adj_flipped.index = newrows
 	adj_flipped.columns = newcols
 
-	common_rows = list(set(rows).intersection(set(newrows)))
-	common_cols = list(set(cols).intersection(set(newcols)))
+	#sometimes L/R don't both show up; add zero rows/cols
+	for r in set(newrows).difference(set(rows)):
+		adj.loc[r] = 0
 
-	adj = adj[commons_cols]
-	adj = adj.reindex(common_rows)
-	adj_flipped = adj_flipped[commons_cols]
-	adj_flipped = adj_flipped.reindex(common_rows)
+	for c in set(newcols).difference(set(cols)):
+		adj[c] = 0
 
-	#TODO compute sim
+	for r in set(rows).difference(set(newrows)):
+		adj_flipped.loc[r] = 0
 
+	for c in set(cols).difference(set(newcols)):
+		adj_flipped[c] = 0
+
+	#reorder the rows and cols to match
+	combine_rows = list(set(rows).union(set(newrows)))
+	combine_cols = list(set(cols).union(set(newcols)))
+	adj = adj[combine_cols]
+	adj = adj.reindex(combine_rows)
+	adj_flipped = adj_flipped[combine_cols]
+	adj_flipped = adj_flipped.reindex(combine_rows)
+
+	##expect combine_rows,combine_cols to be L/R symmetric
+	##only meant for testing
+	#for x in combine_rows:
+	#	if flipLR(x) not in combine_rows:
+	#		print('combine_rows not sym: ', x)
+	#for x in combine_cols:
+	#	if flipLR(x) not in combine_cols:
+	#		print('combine_cols not sym: ', x)
+
+	#compute the similarity for each row
+	df_out = pd.DataFrame((x, fn(adj.loc[x],adj_flipped.loc[x])) for x in combine_rows)
+	df_out.columns = ['pre',fn.__name__]
+	df_out['pre'] = df_out['pre'].apply(ridLR)
+	df_out = df_out.groupby('pre').mean().reset_index()
+
+	return df_out
+
+	#for x in combine_rows:
+	#	if df_out.loc[x][1] != df_out.loc[flipLR(x)][1]:
+	#		print(x) ##expect empty
+
+##do on each pair..
+##expect edgelist, function fn to compare two numbers
+def LR_symmetry_pairwise(df, fn, simscore_name=''):
+	df_flipped = df.copy()
+	df_flipped['pre'] = df_flipped['pre'].apply(flipLR)
+	df_flipped['post'] = df_flipped['post'].apply(flipLR)
+	df_flipped.columns = ['pre','post','sections_flipped']
+#
+	df_copy = df.copy().sort_values(['pre','post'])
+	df_flipped = df_flipped.sort_values(['pre','post'])
+#
+	df_copy['sections_flipped'] = 0
+	df_flipped['sections'] = 0
+#
+	df_all = df_copy.append(df_flipped)
+	df_all = df_all.groupby(['pre','post']).sum().reset_index()
+#
+	#apply sim score to each row
+	fn_name = fn.__name__
+	if len(simscore_name) > 0:
+		fn_name = simscore_name
+	df_all[fn_name] = df_all.apply(lambda row : fn(row.sections, row.sections_flipped), axis=1)
+#
+	#reorder
+	df_all = df_all[['pre','post',fn_name,'sections','sections_flipped']]
+#
+	return df_all
 
 ######################################################################
 ##stuff?
@@ -222,6 +307,13 @@ def polyad_to_monad(df):
 	return df_separate.groupby(['pre','post']).sum().reset_index()
 
 
+
+######################################################################
+
+##convert edge list to adj matrix
+##expect columns of edge list to be 'pre', 'post', and 'sections'
+def edge_to_adj(df_edges):
+	return pd.crosstab(index=df_edges['pre'],columns=df_edges['post'],values=df_edges['sections'],aggfunc='sum').fillna(0)
 
 ######################################################################
 ##some old stuff, used for testing

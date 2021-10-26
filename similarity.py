@@ -1,6 +1,16 @@
 import pandas as pd
 import numpy as np
 from helpers import *
+from datetime import datetime
+import matplotlib.pyplot as plt
+
+######################################################################
+# datetime object containing current date and time
+now = datetime.now()
+
+# dd/mm/YY H:M:S
+dt_string = now.strftime('%d-%m-%Y-%H%M%S')
+print('now = ' + dt_string)
 
 ######################################################################
 ##TODO refactor this, copied from get-polyad-types.py
@@ -22,79 +32,94 @@ syn_cleaned = syn[(syn.pre != '') & (syn.post != '')]
 syn_grouped = syn_cleaned.groupby(['pre','post']).sum().reset_index()
 
 ##get synapses that are large ( >2 sections)
-syn_robust = syn_cleaned[syn_cleaned.sections > 2]
-syn_robust_grouped = syn_robust.groupby(['pre','post']).sum().reset_index()
+#syn_robust = syn_cleaned[syn_cleaned.sections > 2]
+#syn_robust_grouped = syn_robust.groupby(['pre','post']).sum().reset_index()
 
+syn_monad = polyad_to_monad(syn_grouped)
 
-######################################################################
-
-syn_cleaned_flippedLR = syn_cleaned.copy()
-syn_cleaned_flippedLR['pre'] = syn_cleaned_flippedLR['pre'].apply(flipLR)
-syn_cleaned_flippedLR['post'] = syn_cleaned_flippedLR['post'].apply(lambda x : apply_fn_post(flipLR, x))
-
-syn_grouped_flippedLR = syn_grouped.copy()
-syn_grouped_flippedLR['pre'] = syn_grouped_flippedLR['pre'].apply(flipLR)
-syn_grouped_flippedLR['post'] = syn_grouped_flippedLR['post'].apply(lambda x : apply_fn_post(flipLR, x))
-
-##to adj matrix
-adj_orig = pd.crosstab(index=syn_grouped['pre'],columns=syn_grouped['post'],values=syn_grouped['sections'],aggfunc='sum').fillna(0)
-adj_flip = pd.crosstab(index=syn_grouped_flippedLR['pre'],columns=syn_grouped_flippedLR['post'],values=syn_grouped_flippedLR['sections'],aggfunc='sum').fillna(0)
-
-
-##ensure they have the same set of columns
-columns_orig = set(adj_orig.columns)
-columns_flip = set(adj_flip.columns)
-
-for col in columns_flip.difference(columns_orig):
-	adj_orig[col] = 0
-
-for col in columns_orig.difference(columns_flip):
-	adj_flip[col] = 0
-
-##ensure column names are in the same order
-adj_orig = adj_orig[sorted(adj_orig.columns)]
-adj_flip = adj_flip[sorted(adj_flip.columns)]
-
-adj_orig_pre = set(adj_orig.index)
-adj_flip_pre = set(adj_flip.index)
-common_pre = adj_orig_pre.intersection(adj_flip_pre)
-
-
-def L1_diff_single(a,b) : return abs(a - b)
-
-L1_dist = pd.DataFrame((x, total_similarity_score(L1_diff_single, adj_orig.loc[x],adj_flip.loc[x])) for x in common_pre)
-Adam_dist = pd.DataFrame((x, total_similarity_score(similarity_score_single, adj_orig.loc[x],adj_flip.loc[x])) for x in common_pre)
-
-L1_dist.columns = ['pre','L1_dist']
-Adam_dist.columns = ['pre','similarity']
-
-
-
-##also do contact matrix
-
+##also get contacts
 ##same as contact_pixels_adj from synapse-per-contact
 contact_adj = pd.read_csv('N2Y-PAG-contact-matrix.csv',index_col=0)
 contact_adj = contact_adj.fillna(0)
-cols = contact_adj.columns
-rows = contact_adj.index
 
-newcols = map(flipLR, list(cols))
-newrows = map(flipLR, list(rows))
+contact_edgelist = contact_adj.stack().reset_index()
+contact_edgelist.columns = ['pre','post','sections']
+contact_edgelist = contact_edgelist[contact_edgelist.sections != 0]
+
+######################################################################
+#pairwise
+syn_simscore = LR_symmetry_pairwise(syn_monad, similarity_score_single, 'simscore')
+contact_simscore = LR_symmetry_pairwise(contact_edgelist, similarity_score_single, 'simscore')
+contact_L1simscore = LR_symmetry_pairwise(contact_edgelist, L1_diff_single, 'L1_simscore')
+
+#drop the pairs that have no L/R
+syn_simscore_drop = drop_noLR(syn_simscore)
+contact_simscore_drop = drop_noLR(contact_simscore)
+contact_L1simscore_drop = drop_noLR(contact_L1simscore)
+
+#do fraction of simscore out of max
+def fraction_simscore(row):
+	return row['simscore'] / max(row['sections'],row['sections_flipped'])
+
+syn_simscore_drop['simscore_fraction'] = syn_simscore_drop.apply(fraction_simscore,axis=1)
+syn_simscore_drop = syn_simscore_drop[['pre','post','simscore','simscore_fraction','sections','sections_flipped']]
+contact_simscore_drop['simscore_fraction'] = contact_simscore_drop.apply(fraction_simscore,axis=1)
+contact_simscore_drop = contact_simscore_drop[['pre','post','simscore','simscore_fraction','sections','sections_flipped']]
+
+#also do fraction of L1 diff out of max for contact
+def fraction_diff(row):
+	return row['L1_simscore'] / max(row['sections'],row['sections_flipped'])
+
+contact_L1simscore_drop['diff_fraction'] = contact_L1simscore_drop.apply(fraction_diff,axis=1)
+contact_L1simscore_drop = contact_L1simscore_drop[['pre','post','L1_simscore','diff_fraction','sections','sections_flipped']]
+
+#save to file
+syn_simscore_drop.to_csv('synapse_simscore_pairwise_'+dt_string+'.csv',encoding='utf-8-sig',index=False)
+contact_simscore_drop.to_csv('contact_simscore_pairwise_'+dt_string+'.csv',encoding='utf-8-sig',index=False)
+contact_L1simscore_drop.to_csv('contact_L1simscore_pairwise_'+dt_string+'.csv',encoding='utf-8-sig',index=False)
+
+plt.hist(contact_simscore_drop['simscore_fraction'])
+plt.hist(contact_L1simscore_drop['diff_fraction'])
+
+######################################################################
+#"global diff"?
+
+##to adj matrix
+adj = edge_to_adj(syn_grouped)
+adj_monad = edge_to_adj(syn_monad)
+
+##functions used to compare two weights
+def L1_diff_single(a,b):
+	return abs(a - b)
+
+fn_simscore = total_fn(similarity_score_single)
+fn_L1 = total_fn(L1_diff_single)
+
+##compute similarity for polyads
+df_out = LR_symmetry(adj,fn_L1)
+df_out.columns = ['pre','L1_dist']
+df_out_Adam = LR_symmetry(adj,fn_simscore)
+df_out_Adam.columns = ['pre','sim_score_Adam']
+
+df_out.to_csv('L1_dist_01_'+dt_string+'.csv',encoding='utf-8-sig',index=False)
+df_out_Adam.to_csv('Adam_dist_01_'+dt_string+'.csv',encoding='utf-8-sig',index=False)
+
+##compute similarity for monads
+df_out_monad = LR_symmetry(adj_monad,fn_L1)
+df_out_monad.columns = ['pre','L1_dist']
+df_out_monad_Adam = LR_symmetry(adj_monad,fn_simscore)
+df_out_monad_Adam.columns = ['pre','sim_score_Adam']
+
+df_out_monad.to_csv('L1_dist_01_monad_'+dt_string+'.csv',encoding='utf-8-sig',index=False)
+df_out_monad_Adam.to_csv('Adam_dist_01_monad_'+dt_string+'.csv',encoding='utf-8-sig',index=False)
 
 
-##rename with L/R flipped
-contact_flipped = contact_adj.copy()
-contact_flipped.columns = newcols
-contact_flipped.index = newrows
-##then reorder
-contact_flipped = contact_flipped[cols]
-contact_flipped = contact_flipped.reindex(rows)
+##compute similarity for contact
+df_out_contact = LR_symmetry(contact_adj,fn_L1)
+df_out_contact.columns = ['pre','L1_dist']
+df_out_contact_Adam = LR_symmetry(contact_adj,fn_simscore)
+df_out_contact_Adam.columns = ['pre','sim_score_dist']
 
+df_out_contact.to_csv('L1_dist_01_contact_'+dt_string+'.csv',encoding='utf-8-sig',index=False)
+df_out_contact_Adam.to_csv('Adam_dist_01_contact_'+dt_string+'.csv',encoding='utf-8-sig',index=False)
 
-
-#adj_orig = adj_orig.sort_index()
-#adj_flip = adj_flip.sort_index()
-
-
-##TODO next: compare rows of adj_orig, adj_flip
-#sum(abs(adj_orig.iloc[0] - adj_flip.iloc[0]))
