@@ -1,6 +1,5 @@
 import pandas as pd
 import numpy as np
-import os
 from datetime import datetime
 import matplotlib.pyplot as plt
 from helpers import *
@@ -70,7 +69,7 @@ PHAR_dist = synapse_sections_dist.iloc[max_var_ind].section_dist
 
 
 dir_histograms = 'synapse-size-histograms-'+dt_string
-#os.mkdir(dir_histograms)
+
 
 def save_graph_by_row(row):
 	mylist = row['section_dist']
@@ -109,7 +108,6 @@ syn_robust_grouped.to_csv('synapse-sections-robust-'+dt_string+'.csv',encoding='
 #(see https://medium.com/@yangdustin5/quick-guide-to-pandas-pivot-table-crosstab-40798b33e367)
 def save_df_as_adj(df,filename):
     adj_table = pd.crosstab(index=df['pre'],columns=df['post'],values=df['sections'],aggfunc='sum')
-    #adj_table.to_csv('adj_table_03.csv')
     adj_table.to_csv(filename+'.csv',encoding='utf-8-sig')
     adj_table_transpose = adj_table.transpose()
     adj_table_transpose.to_csv(filename+'-transpose.csv',encoding='utf-8-sig')

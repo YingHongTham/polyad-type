@@ -14,6 +14,7 @@ print('now = ' + dt_string)
 
 ######################################################################
 ##TODO refactor this, copied from get-polyad-types.py
+##load data
 
 #get synapse list
 syn = pd.read_csv('SI-3-Synapse-lists-male.csv')
@@ -122,4 +123,12 @@ df_out_contact_Adam.columns = ['pre','sim_score_dist']
 
 df_out_contact.to_csv('L1_dist_01_contact_'+dt_string+'.csv',encoding='utf-8-sig',index=False)
 df_out_contact_Adam.to_csv('Adam_dist_01_contact_'+dt_string+'.csv',encoding='utf-8-sig',index=False)
+
+
+######################################################################
+## getting all similarity scores of all pairs
+
+
+
+
 
