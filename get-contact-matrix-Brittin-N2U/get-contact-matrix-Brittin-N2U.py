@@ -39,8 +39,8 @@ contact_sections = contact_imgNum.groupby(['pre','post']).size().reset_index(nam
 #print("now =", now)
 #dt_string = now.strftime("%d-%m-%Y-%H%M%S")
 
-contact_pixels.to_csv('contact-Brittin-N2U-pixels.csv',encoding='utf-8-sig')
-contact_sections.to_csv('contact-Brittin-N2U-sections.csv',encoding='utf-8-sig')
+contact_pixels.to_csv('../data-aux/contact-Brittin-N2U-pixels.csv',encoding='utf-8-sig')
+contact_sections.to_csv('../data-aux/contact-Brittin-N2U-sections.csv',encoding='utf-8-sig')
 
 ###############################################
 

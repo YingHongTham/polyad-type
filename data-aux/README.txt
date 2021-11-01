@@ -5,7 +5,7 @@
 	see README in that folder
 
 -male_celllist.csv
-	manually copied all male cell name from SI-4-Celllists.xlsx
+	manually copied all male cell name from SI-4-Celllists.xlsx (open with LibreOffice)
 	read from file (see also helpers.py):
 	>>> celllist = pd.read_csv("male_celllist.csv", header=None, comment='#')
 

@@ -1,6 +1,11 @@
 import pandas as pd
 import math
+import os
 
+######################################################################
+##folder where data is stored
+data_source = os.path.dirname(__file__) + '/../data-source/'
+data_aux = os.path.dirname(__file__) + '/../data-aux/'
 
 ######################################################################
 ## helper functions for cleaning neuron names
@@ -66,7 +71,7 @@ def convert_name(name):
 ##which were manually stored in file male_celllist.csv
 #(but also compare https://www.wormatlas.org/celllistsulston.htm)
 #seems some cells like HSNL/R, VC01(VC1) are there, but not in celllist
-celllist = pd.read_csv("male_celllist.csv", header=None, comment='#')
+celllist = pd.read_csv(data_aux+'male_celllist.csv', header=None, comment='#')
 #remove unexpected spaces...
 celllist = celllist[0].apply(lambda x : x.replace(" ",""))
 celllist = celllist.tolist()
@@ -102,7 +107,7 @@ def in_post(cell, post):
 ######################################################################
 ##left-right pairs stuff
 
-cellLR = pd.read_csv('male_celllist_LR.csv',index_col=False)
+cellLR = pd.read_csv(data_aux+'male_celllist_LR.csv',index_col=False)
 
 ## L <-> R
 ## applies to one name and (comma-sep) list of names
@@ -174,6 +179,17 @@ C_2 = 1
 def similarity_score_single(x, y):
 	return min(x,y) - C_1 * max(x,y) * (math.e ** ( - C_2 * min(x,y) ))
 
+def simscore(x,y):
+	return total_similarity_score(similarity_score_single,x,y)
+
+##L1
+def L1_diff_single(a,b):
+	return abs(a - b)
+
+def L1_dist(x,y):
+	return total_similarity_score(L1_diff_single,x,y)
+
+
 ##takes in two pandas.Series x,y (with same column names)
 ##and fn of two variables
 ##sums fn(x[i],y[i]) over columns i
@@ -199,7 +215,7 @@ def total_fn(fn_single, newfnname=''):
 
 ##L/R symmetry compute
 ##expects:
-##adj : DataFrame adjacency matrix (pre against post)
+##adj : DataFrame adjacency matrix (pre against post) (may not be symmetric)
 ##fn : the similarity function to use to compare two rows (Series)
 ##polyad : True if post is given as polyad (default = True)
 ##combineLR : True if combine the L/R versions of post
@@ -259,8 +275,35 @@ def LR_symmetry(adj, fn, polyad=False, combineLR=False):
 	#	if df_out.loc[x][1] != df_out.loc[flipLR(x)][1]:
 	#		print(x) ##expect empty
 
-##do on each pair..
-##expect edgelist, function fn to compare two numbers
+
+
+##LR_symmetry_pairwise
+##compares the number of sections (of contact/synapse/..)
+##from cell X to Y
+##with X' to Y'
+##X',Y' is LR mirror of X,Y
+##(if X is not a LR homolog pair, then X' = X)
+##(for example, HOA -> PHCL would be compared with HOA -> PHCR,
+##so in a sense it computes the asymmetry of HOA)
+##expect:
+##	df: edgelist, with columns: pre, post, sections,
+##	fn: function fn to compare two numbers
+##	simscore: (optional) name of similarity score
+##								(defaults to name of fn)
+##output:
+##
+##summary of algorithm:
+##start with df:
+#AVAL, PVCL, 1
+#AVAL, PVCR, 1
+#AVAR, PVCR, 2
+#(AVAR, PVCL, 0) (this row is not actually present in data because 0)
+##produces df_all:
+#AVAL, PVCL, 1, 2
+#AVAL, PVCR, 1, 0
+#AVAR, PVCR, 2, 1
+#AVAR, PVCL, 0, 1
+##applies the fn to compare the two numbers in each row
 def LR_symmetry_pairwise(df, fn, simscore_name=''):
 	df_flipped = df.copy()
 	df_flipped['pre'] = df_flipped['pre'].apply(flipLR)
@@ -270,19 +313,22 @@ def LR_symmetry_pairwise(df, fn, simscore_name=''):
 	df_copy = df.copy().sort_values(['pre','post'])
 	df_flipped = df_flipped.sort_values(['pre','post'])
 #
+	#sneaky trick to get the number of sections for the flipped
 	df_copy['sections_flipped'] = 0
 	df_flipped['sections'] = 0
-#
 	df_all = df_copy.append(df_flipped)
 	df_all = df_all.groupby(['pre','post']).sum().reset_index()
+	#has columns pre, post, sections, sections_flipped
 #
-	#apply sim score to each row
+	#get function name, serves as new column name
 	fn_name = fn.__name__
 	if len(simscore_name) > 0:
 		fn_name = simscore_name
+#
+	#apply sim score to each row
 	df_all[fn_name] = df_all.apply(lambda row : fn(row.sections, row.sections_flipped), axis=1)
 #
-	#reorder
+	#reorder columns
 	df_all = df_all[['pre','post',fn_name,'sections','sections_flipped']]
 #
 	return df_all
@@ -314,6 +360,55 @@ def polyad_to_monad(df):
 ##expect columns of edge list to be 'pre', 'post', and 'sections'
 def edge_to_adj(df_edges):
 	return pd.crosstab(index=df_edges['pre'],columns=df_edges['post'],values=df_edges['sections'],aggfunc='sum').fillna(0)
+
+
+######################################################################
+##loading data
+
+#get synapse list
+#columns: pre,post,sections
+def get_synapse_list():
+	syn = pd.read_csv(data_source+'SI-3-Synapse-lists-male.csv')
+	syn = syn.query('EM_series=="N2Y" & type=="chemical"')
+	syn = syn[['pre','post','sections']]
+
+	#clean the pre neurons
+	syn['pre'] = syn['pre'].apply(clean_neuron_name)
+	#clean the post neurons
+	syn['post'] = syn['post'].apply(clean_post)
+
+	#after cleaning, empty string means unknown, filter them out
+	syn = syn[(syn.pre != '') & (syn.post != '')]
+
+	return syn
+
+def get_contact_adj():
+	contact_adj = pd.read_csv(data_source+'N2Y-PAG-contact-matrix.csv',index_col=0)
+	contact_adj = contact_adj.fillna(0)
+	return contact_adj
+
+def get_contact_list():
+	contact_adj = get_contact_adj()
+
+	contact_edgelist = contact_adj.stack().reset_index()
+	contact_edgelist.columns = ['pre','post','sections']
+	contact_edgelist = contact_edgelist[contact_edgelist.sections != 0]
+
+	return contact_edgelist
+
+######################################################################
+
+#apply dist to every pair of rows
+#outputs an adj matrix, output_df[cell1][cell2] = fn(cell1,cell2)
+def pairwise_dist(df, fn):
+	rows = df.index
+	output_df = pd.DataFrame(index=rows)
+	for r in rows:
+		print(r)
+		output_df[r] = df.apply(lambda rr : fn(df.loc[r],rr), axis=1)
+#
+	return output_df
+
 
 ######################################################################
 ##some old stuff, used for testing

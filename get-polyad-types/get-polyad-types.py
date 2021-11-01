@@ -16,18 +16,20 @@ print('now = ' + dt_string)
 #TODO merge left and right neurons
 
 
-#get synapse list
-syn = pd.read_csv('SI-3-Synapse-lists-male.csv')
-syn = syn.query('EM_series=="N2Y" & type=="chemical"')
-syn = syn[['pre','post','sections']]
-
-#clean the pre neurons
-syn['pre'] = syn['pre'].apply(clean_neuron_name)
-#clean the post neurons
-syn['post'] = syn['post'].apply(clean_post)
-
-#after cleaning, empty string means unknown, filter them out
-syn_cleaned = syn[(syn.pre != '') & (syn.post != '')]
+##this was sent to helpers.py
+##get synapse list
+#syn = pd.read_csv('SI-3-Synapse-lists-male.csv')
+#syn = syn.query('EM_series=="N2Y" & type=="chemical"')
+#syn = syn[['pre','post','sections']]
+#
+##clean the pre neurons
+#syn['pre'] = syn['pre'].apply(clean_neuron_name)
+##clean the post neurons
+#syn['post'] = syn['post'].apply(clean_post)
+#
+##after cleaning, empty string means unknown, filter them out
+#syn_cleaned = syn[(syn.pre != '') & (syn.post != '')]
+syn_cleaned = get_synapse_list()
 
 #sum total number of sections by pre,post
 syn_grouped = syn_cleaned.groupby(['pre','post']).sum().reset_index()
