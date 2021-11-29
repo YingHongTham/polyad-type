@@ -122,11 +122,11 @@ fn_L1 = helpers.L1_dist
 pairwise_L1 = helpers.pairwise_dist(syn_adj,fn_L1)
 pairwise_simscore = helpers.pairwise_dist(syn_adj,fn_simscore)
 
-pairwise_L1.to_csv('pairwise_monad_L1_'+dt_string+'.csv',encoding='utf-8-sig')
-pairwise_simscore.to_csv('pairwise_monad_simscore_'+dt_string+'.csv',encoding='utf-8-sig')
+pairwise_L1.to_csv('similarity/pairwise_monad_L1_'+dt_string+'.csv',encoding='utf-8-sig')
+pairwise_simscore.to_csv('similarity/pairwise_monad_simscore_'+dt_string+'.csv',encoding='utf-8-sig')
 #read with
-pairwise_L1 = pd.read_csv('similarity/pairwise_monad_L1_27-10-2021-161929.csv',index_col=0)
-pairwise_simscore = pd.read_csv('similarity/pairwise_monad_simscore_27-10-2021-161929.csv',index_col=0)
+#pairwise_L1 = pd.read_csv('similarity/pairwise_monad_L1_27-10-2021-161929.csv',index_col=0)
+#pairwise_simscore = pd.read_csv('similarity/pairwise_monad_simscore_27-10-2021-161929.csv',index_col=0)
 
 ##for synapses, also compare similarity of incoming edges
 syn_adj_T = syn_adj.transpose()
@@ -136,6 +136,6 @@ pre = syn_adj_T.index
 pairwise_T_L1 = helpers.pairwise_dist(syn_adj_T,fn_L1)
 pairwise_T_simscore = helpers.pairwise_dist(syn_adj_T,fn_simscore)
 
-pairwise_T_L1.to_csv('pairwise_T_monad_L1_'+dt_string+'.csv',encoding='utf-8-sig')
-pairwise_T_simscore.to_csv('pairwise_T_monad_simscore_'+dt_string+'.csv',encoding='utf-8-sig')
+pairwise_T_L1.to_csv('similarity/pairwise_T_monad_L1_'+dt_string+'.csv',encoding='utf-8-sig')
+pairwise_T_simscore.to_csv('similarity/pairwise_T_monad_simscore_'+dt_string+'.csv',encoding='utf-8-sig')
 

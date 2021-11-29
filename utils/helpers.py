@@ -4,8 +4,8 @@ import os
 
 ######################################################################
 ##folder where data is stored
-data_source = os.path.dirname(__file__) + '/../data-source/'
-data_aux = os.path.dirname(__file__) + '/../data-aux/'
+data_source = os.path.join(os.path.dirname(__file__), '../data-source/')
+data_aux = os.path.join(os.path.dirname(__file__), '../data-aux/')
 
 ######################################################################
 ## helper functions for cleaning neuron names
@@ -338,6 +338,8 @@ def LR_symmetry_pairwise(df, fn, simscore_name=''):
 
 ##turn polyads into usual synapses, i.e. forget polyad data
 ##should assume that names have been cleaned
+##input df should have columns 'pre','post','sections'
+##outputs dataframe with those columns
 def polyad_to_monad(df):
 	##max number of post in a single polyad
 	max_post = max(df.apply(lambda row : len(row.post.split(',')), axis=1))
@@ -367,6 +369,7 @@ def edge_to_adj(df_edges):
 
 #get synapse list
 #columns: pre,post,sections
+#cleans the data in the process
 def get_synapse_list():
 	syn = pd.read_csv(data_source+'SI-3-Synapse-lists-male.csv')
 	syn = syn.query('EM_series=="N2Y" & type=="chemical"')

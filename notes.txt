@@ -14,6 +14,9 @@ which we keep in data-aux
 
 ######################################################################
 
+note to self:
+commonly used python pandas/dataframe stuff
+found in Documents/notes.txt (search for 'dataframe')
 
 ######################################################################
 pip install stuff:

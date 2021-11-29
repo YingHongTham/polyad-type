@@ -11,7 +11,8 @@ usually load to our sql server by
 $ mysql -u yinghong -p < adult_databases.sql
 but it seems the sql files are lacking the CREATE DATABASE commands...
 manually added them myself:
-
+(or just log in, create the empty database first, then do 
+$ mysql -u yinghong -p adult_db < adult_databases.sql)
 
 in adult_databases.sql:
 
