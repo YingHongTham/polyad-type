@@ -340,6 +340,9 @@ def LR_symmetry_pairwise(df, fn, simscore_name=''):
 ##should assume that names have been cleaned
 ##input df should have columns 'pre','post','sections'
 ##outputs dataframe with those columns
+##note that this also sums up the number of sections over
+##(so there is unique row for each pre,post
+##all synapses between cells
 def polyad_to_monad(df):
 	##max number of post in a single polyad
 	max_post = max(df.apply(lambda row : len(row.post.split(',')), axis=1))
@@ -366,6 +369,7 @@ def edge_to_adj(df_edges):
 
 ######################################################################
 ##loading data
+##all from N2Y
 
 #get synapse list
 #columns: pre,post,sections
@@ -385,19 +389,48 @@ def get_synapse_list():
 
 	return syn
 
+
+#get adjacency matrix, entries are amount of contact by pixel
+#returns dataframe, rows and columns are indexed by cell names
 def get_contact_adj():
 	contact_adj = pd.read_csv(data_source+'N2Y-PAG-contact-matrix.csv',index_col=0)
 	contact_adj = contact_adj.fillna(0)
 	return contact_adj
 
-def get_contact_list():
-	contact_adj = get_contact_adj()
 
+#contact matrix to edge list
+#note that the edgelist will have two rows for each edge,
+#one for each direction
+def contact_list_from_edge(contact_adj):
 	contact_edgelist = contact_adj.stack().reset_index()
-	contact_edgelist.columns = ['pre','post','sections']
-	contact_edgelist = contact_edgelist[contact_edgelist.sections != 0]
+	contact_edgelist.columns = ['pre','post','pixels']
+	contact_edgelist = contact_edgelist[contact_edgelist['pixels'] != 0]
 
 	return contact_edgelist
+
+
+#get contact as edge list
+#returns dataframe with columns 'pre','post','pixels'
+def get_contact_list():
+	contact_adj = get_contact_adj()
+	return contact_list_from_edg(contact_adj)
+
+
+#get gene expressions of cells
+#returns dataframe, row = gene, col = cells
+#it seems all entries are integers
+#they're presented as floats though, check entries integer with
+#exp.loc[gene][cell].is_integer()
+def get_gene_expression():
+	exp = pd.read_csv(data_source+'Expression-matrix-Jan-2020.csv',index_col=0)
+	exp = exp.fillna(0) ##empty entries interpret as 0
+
+	##drop the last 5 columns ('Unnamed: 23*'); they're all 0
+	exp = exp[exp.columns[:-5]]
+
+	return exp
+
+
 
 ######################################################################
 

@@ -18,21 +18,84 @@ import utils.helpers as helpers
 
 ###################################################################
 
-##path to folder containing data
-filepath_datasource = '../data-source/'
-
-#exp is dataframe, row = gene, col = cells
-exp = pd.read_csv(filepath_datasource+'Expression-matrix-Jan-2020.csv',index_col=0)
-exp = exp.fillna(0) ##empty entries interpret as 0
-
-##drop the last 5 columns ('Unnamed: 23*'); they're all 0
-exp = exp[exp.columns[:-5]]
+###path to folder containing data
+#filepath_datasource = '../data-source/'
+#
+##exp is dataframe, row = gene, col = cells
+#exp = pd.read_csv(filepath_datasource+'Expression-matrix-Jan-2020.csv',index_col=0)
+#exp = exp.fillna(0) ##empty entries interpret as 0
+#
+###drop the last 5 columns ('Unnamed: 23*'); they're all 0
+#exp = exp[exp.columns[:-5]]
 
 
 ###################################################################
+##attempt to add a more convenient method to get rows of dataframe
+#e.g. que(syn, {'pre' : 'AVAL'})
+def que(self, search_dict):
+	if len(search_dict) == 0:
+		return self
+#
+	query_list = [f"(self['{k}'] == {repr(v)})" for (k,v) in search_dict.items()]
+	query = " & ".join(query_list)
+	print(query)
+	return self[eval(query)]
+
+###################################################################
+##load data
 ##get the synapses, forget polyad structure
 syn = helpers.get_synapse_list()
 syn = helpers.polyad_to_monad(syn)
+
+
+##get gene expressions
+exp = helpers.get_gene_expression()
+
+##get contact matrix, then edgelist
+#also need all the cell names in order to compare with syn
+contact_adj = helpers.get_contact_adj()
+contact_cells = set(contact_adj.index)
+contact_edgelist = helpers.contact_list_from_edge(contact_adj)
+
+###################################################################
+##restrict to cells in common in syn and contact
+syn_cells = set(syn['pre']).union(set(syn['post']))
+
+common_cells = syn_cells.intersection(contact_cells)
+common_cells = common_cells.intersection(set(exp.columns))
+
+###################################################################
+##restrict syn, contact, gene to common cells
+syn = syn[(syn['pre'].isin(common_cells)) & (syn['post'].isin(common_cells))]
+contact = contact_edgelist[(contact_edgelist['pre'].isin(common_cells)) & (contact_edgelist['post'].isin(common_cells))]
+exp = exp[common_cells]
+
+###################################################################
+##combine the syn and contact
+##strategy: stack the two dataframes,
+##then groupby pre & post
+syn['pixels'] = 0
+contact['sections'] = 0
+contact = contact[syn.columns] ##rearrange columns
+
+syn_contact = syn.append(contact)
+syn_contact = syn_contact.groupby(['pre','post']).sum().reset_index()
+
+##add column of ratio = sections/pixels
+##apparently some synapses form without contact?!?
+syn_contact = syn_contact[syn_contact.pixels > 0]
+syn_contact['ratio'] = syn_contact.apply(lambda row : row['sections'] / row['pixels'] * 10000.0, axis=1)
+
+###################################################################
+##noting the asymmetry in chemical synapse formation;
+##some pairs, e.g. PCAR,PVX and PCAL,PVX
+##have lots of contact, and many synapses in one direction,
+##but few synapses in the other direction
+##may be good place to look in gene expression TODO
+##
+##plot graph of asymmetry in number of synapse vs contact
+#TODO
+#syn_contact.sort_values('pixels', ascending=False)
 
 
 ###################################################################
@@ -53,11 +116,10 @@ def gene_subgraph(gene, syn):
 	return syn[(syn['pre'].isin(cells)) & (syn['post'].isin(cells))]
 
 
-
-gene = 'bam-2'
-cells = get_cells_expressing_gene(gene, exp)
-
-subgr = gene_subgraph(gene, syn)
+##testing
+#gene = 'bam-2'
+#cells = get_cells_expressing_gene(gene, exp)
+#subgr = gene_subgraph(gene, syn)
 
 ###################################################################
 ##turn dataframe (list) of synapses into graph (networkx)
@@ -124,3 +186,15 @@ for gene in exp.index:
 	cells = get_cells_expressing_gene(gene, exp)
 	syn_subgr_nx = syn_nx.subgraph(cells)
 	bokeh_visualization(syn_subgr_nx, gene)
+
+
+
+##now compare synapse to contact;
+##make graph visualization with sliding bar for some parameter
+##show edges with weight above parameter
+##edge weight by ratio of synapse / contact
+
+##TODO hmm perhaps easier to compare contact with gap junction
+##since both are symmetric and only pairwise
+
+
