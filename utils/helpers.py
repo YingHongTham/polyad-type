@@ -401,12 +401,26 @@ def get_contact_adj():
 #contact matrix to edge list
 #note that the edgelist will have two rows for each edge,
 #one for each direction
-def contact_list_from_edge(contact_adj):
+#clears the zero entries by default
+##TODO bad name; should be contact_list_from_adj...
+##keeping this for backwards compatibility
+def contact_list_from_edge(contact_adj, clear_zeros=True):
 	contact_edgelist = contact_adj.stack().reset_index()
 	contact_edgelist.columns = ['pre','post','pixels']
-	contact_edgelist = contact_edgelist[contact_edgelist['pixels'] != 0]
+	if clear_zeros:
+		contact_edgelist = contact_edgelist[contact_edgelist['pixels'] != 0]
 
 	return contact_edgelist
+
+##better version of contact_list_from_edge
+def edgelist_from_adj(contact_adj, row_col_val=['row','col','val'], clear_zeros=True):
+	edgelist = contact_adj.stack().reset_index()
+	edgelist.columns = row_col_val.copy()
+	val = row_col_val[2]
+	if clear_zeros:
+		edgelist = edgelist[edgelist[val] != 0]
+#
+	return edgelist
 
 
 #get contact as edge list
@@ -444,6 +458,31 @@ def pairwise_dist(df, fn):
 		output_df[r] = df.apply(lambda rr : fn(df.loc[r],rr), axis=1)
 #
 	return output_df
+
+def pairwise_dist_col(df, fn):
+	cols = df.columns
+	output_df = pd.DataFrame(index=cols)
+	for c in cols:
+		print(c)
+		output_df[c] = df.apply(lambda cc : fn(df[c],cc), axis=0)
+#
+	return output_df
+
+
+
+
+###################################################################
+##attempt to add a more convenient method to get rows of dataframe
+#e.g. que(syn, {'pre' : 'AVAL'})
+def que(self, search_dict):
+	if len(search_dict) == 0:
+		return self
+#
+	query_list = [f"(self['{k}'] == {repr(v)})" for (k,v) in search_dict.items()]
+	query = " & ".join(query_list)
+	print(query)
+	return self[eval(query)]
+
 
 
 ######################################################################
