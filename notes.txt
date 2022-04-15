@@ -26,3 +26,99 @@ matplotlib
 pandas
 
 
+
+######################################################################
+stuff from Elegance computer
+
+================================================================================
+
+List of neurons, names and description:
+https://www.wormatlas.org/neurons/Individual%20Neurons/Neuronframeset.html
+
+================================================================================
+
+Elegance is used for making contins
+(contiguous sections of a single "object" - nucleus, neuron process etc.)
+Data used for Elegance (e.g. tif files) in ~/Z
+
+Load images:
+-Image > Find
+-make query on images; produces table of images
+-select the ones that want to be loaded, then Load
+
+-Image>Lock Images
+	do translation on all three images simultaneously
+
+================================================================================
+
+Finding the distance between pixels
+Method:
+-take image in nerve ring (IMG_Number N2UNR* in "object table cell bodies.xlsx")
+-count number of pixels between two myofibril
+-using GIMP to mark the myofibrils
+	(GIMP saves as a xcf file; copy images ~/Z/N2U/N2U_*.tif
+	to ~/Documents/data-excel/N2U-pixel-calibration;
+	edited files are N2U_*.xcf)
+-pixels/myofibril separations stored in spreadsheet
+	pixel-per-microfibril.ods
+-wormatlas image shows about 20 myofibril separations in 1 microns
+	 see https://wormatlas.org/hermaphrodite/muscleintro/mainframe.htm
+	 (MusFIG 1A & B)
+	 (note the bar refers to the line segment above label "Sarcomere",
+	 the sarcomere itself is 1micron)
+	 -N2U_128: 7308.8px vertical, 8745.1px across 
+
+-alternative method to estimate scale:
+	-get area of slice, and compute radius of circle with that area!
+	-method: add layer, use brush tool to draw boundary,
+		then fill with bucket with white,
+		then count using the histogram tool
+		(Windows > Dockable dialogs > Histogram,
+			put arrow to the white end, see the count statistic below)
+		(need to make new layer, otherwise the fill won't work)
+-image  : area       -> diameter (assuming it's a circle)
+-N2U_061: 45368576px -> 7600.3px
+-N2U_113: 47284062px -> 7759.1px
+-N2U_128: 49753799px -> 7959.2px
+-N2U_148: 48240473px -> 7837.2px
+-N2U_165: 46791227px -> 7718.6px
+-average diameter: 7774.9px
+	-> should correspond to about 50 microns (width of worm)
+	-> 7774.9px / 50 microns = 155.5px/micron
+-previous measurement in pixel-per-microfibril.ods is
+	12.3px per microfibril (thick filament)
+	-20 myofibril separations in 1 micron
+	-12.3 * 20 = 246 px per micron
+
+-checking Amin's plot for scale:
+	-see "files for Columbia.xlsx"
+	-under "contin names and numbers", "nuclear objects, sql",
+		and "nuclear objects, display" sheets
+	-AVER: CONTIN = 118
+		-image 169 to 183 (=15 slices)
+	-RMDR: CONTIN = 1246
+		-image 147 to 172 (=26 slices)
+	-plot in z-axis should be 37 slices (147 to 183)
+		-90 nm per slice (nano, not micro!)
+		-3.3 microns
+	-in x-y planes, check distance between RIAR and RIBL
+		RIBL: CONTIN = 94 (RIBL_old = 1256)
+		RIAR: CONTIN = 125 -> x,y = 1876, 1036
+					CONTIN = 160 -> ?
+
+
+================================================================================
+
+mysql table on montefiore server
+(http://elegance-server.montefiore.org/phpmyadmin/)
+in the N2U db, most tables are empty/does not exist,
+for now just hid them from view
+(when hover mouse over the table in the directory tree on the left pane,
+will show a light bulb icon)
+left with the following tables:
+-contin
+-display2
+-object
+-relationship
+-Sheet1 (no idea what this one is)
+
